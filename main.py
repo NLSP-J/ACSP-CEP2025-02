@@ -151,7 +151,7 @@ def reset_game():
 
 
 async def main():
-    global running
+    global running, letters, count, game_over, sound_played
     while running:
         screen.fill(black)
         time_up = draw_timer()
