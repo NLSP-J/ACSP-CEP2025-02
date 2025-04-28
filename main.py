@@ -2,10 +2,12 @@ import random
 import pygame as pg
 import word as w
 import time
+import asyncio
 
 # Initialize game
 pg.init()
 pg.mixer.init()
+clock = pg.time.Clock()
 
 # Game constants
 win_width = 600
@@ -14,8 +16,8 @@ screen = pg.display.set_mode([win_width, win_height])
 pg.display.set_caption('Word Challenge')
 
 # Load sounds
-win_sound = pg.mixer.Sound('C:\MyFiles\pyproj\pygame_env\ACSP\ACSP5-3\Win.wav')
-lose_sound = pg.mixer.Sound('C:\MyFiles\pyproj\pygame_env\ACSP\ACSP5-3\Lose.wav')
+win_sound = pg.mixer.Sound('./assets/sfx/Win.ogg')
+lose_sound = pg.mixer.Sound('./assets/sfx/Lose.ogg')
 
 # Colors
 white = (255, 255, 255)
@@ -31,7 +33,9 @@ small_font = pg.font.Font(None, 30)
 timer_font = pg.font.Font(None, 35)
 
 # Game variables
-ans = random.choice(w.word_list)
+random.seed(time.time())
+L = w.word_list
+ans = L[random.randint(0,len(L))]
 game_board = [[' ']*5 for _ in range(6)]
 count = 0
 letters = 0
@@ -145,52 +149,58 @@ def reset_game():
     letter_status = {chr(i): 'dark_gray' for i in range(97, 123)}
     start_time = time.time()
 
-while running:
-    screen.fill(black)
-    time_up = draw_timer()
 
-    if time_up and not game_over and not timer_stopped:
-        game_over = True
-        timer_stopped = True
-        frozen_remaining_time = 0
-        if not sound_played:
-            lose_sound.play()
-            sound_played = True
-
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            running = False
-
-        if event.type == pg.TEXTINPUT and letters < 5 and not game_over:
-            entry = event.text.lower()
-            if entry.isalpha():
-                game_board[count][letters] = entry.upper()
-                letters += 1
-
-        if event.type == pg.KEYDOWN:
-            if event.key == pg.K_BACKSPACE and letters > 0:
-                game_board[count][letters - 1] = ' '
-                letters -= 1
-
-            if event.key == pg.K_RETURN:
-                if game_over:
-                    reset_game()
-                elif letters == 5 and not game_over:
-                    check_match()
-                    if ''.join(game_board[count]).lower() == ans or count == 5:
-                        game_over = True
-                        timer_stopped = True
-                        if ''.join(game_board[count]).lower() != ans and not sound_played:
-                            lose_sound.play()
-                            sound_played = True
-                        frozen_remaining_time = max(time_limit - int(time.time() - start_time), 0)
-                    else:
-                        count += 1
-                        letters = 0
-
-    draw_board()
-    draw_keyboard()
-    draw_game_over()
-    pg.display.flip()
-
-pg.quit()
+async def main():
+    global running
+    while running:
+        screen.fill(black)
+        time_up = draw_timer()
+    
+        if time_up and not game_over and not timer_stopped:
+            game_over = True
+            timer_stopped = True
+            frozen_remaining_time = 0
+            if not sound_played:
+                lose_sound.play()
+                sound_played = True
+    
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                running = False
+    
+            if event.type == pg.TEXTINPUT and letters < 5 and not game_over:
+                entry = event.text.lower()
+                if entry.isalpha():
+                    game_board[count][letters] = entry.upper()
+                    letters += 1
+    
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_BACKSPACE and letters > 0:
+                    game_board[count][letters - 1] = ' '
+                    letters -= 1
+    
+                if event.key == pg.K_RETURN:
+                    if game_over:
+                        reset_game()
+                    elif letters == 5 and not game_over:
+                        check_match()
+                        if ''.join(game_board[count]).lower() == ans or count == 5:
+                            game_over = True
+                            timer_stopped = True
+                            if ''.join(game_board[count]).lower() != ans and not sound_played:
+                                lose_sound.play()
+                                sound_played = True
+                            frozen_remaining_time = max(time_limit - int(time.time() - start_time), 0)
+                        else:
+                            count += 1
+                            letters = 0
+    
+        draw_board()
+        draw_keyboard()
+        draw_game_over()
+        pg.display.update()
+        await asyncio.sleep(0)
+    
+    pg.quit()
+    
+asyncio.run(main())
